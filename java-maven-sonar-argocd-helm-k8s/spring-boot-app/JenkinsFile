@@ -2,21 +2,21 @@ pipeline {
   agent {
     docker {
       image 'abhishekf5/maven-abhishek-docker-agent:v1'
-      args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // mount Docker socket to access the host's Docker daemon
+      args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
     }
   }
   
   triggers {
     githubPush()  // Automatically triggers a build on a GitHub push event
-    
   }
 
   stages {
     stage('Checkout') {
       steps {
         echo 'Cloning repository...'
-        git branch: 'main', url: 'https://github.com/suraj-v86/Jenkins-Zero-To-Hero.git'
-        credentialsId: 'github'
+        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+          git branch: 'main', url: 'https://github.com/suraj-v86/Jenkins-Zero-To-Hero.git', credentialsId: 'github'
+        }
       }
     }
 
