@@ -8,6 +8,7 @@ pipeline {
   
   triggers {
     githubPush()  // Automatically triggers a build on a GitHub push event
+    credentialsId: 'github'
   }
 
   stages {
