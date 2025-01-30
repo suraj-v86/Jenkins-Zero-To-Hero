@@ -8,7 +8,7 @@ pipeline {
   
   triggers {
     githubPush()  // Automatically triggers a build on a GitHub push event
-    credentialsId: 'github'
+    
   }
 
   stages {
@@ -16,6 +16,7 @@ pipeline {
       steps {
         echo 'Cloning repository...'
         git branch: 'main', url: 'https://github.com/suraj-v86/Jenkins-Zero-To-Hero.git'
+        credentialsId: 'github'
       }
     }
 
