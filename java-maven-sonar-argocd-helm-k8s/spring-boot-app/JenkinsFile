@@ -58,49 +58,37 @@ pipeline {
     }
 
     stage('Update Deployment File') {
-      environment {
+    environment {
         GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
         GIT_USER_NAME = "suraj-v86"
-      }
-      steps {
-        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-          sh '''
-            echo "Checking out the latest code..."
-            git checkout main || git checkout -b main
-
-            echo "Setting Git user info..."
-            git config user.email "suraj.xyz@gmail.com"
-            git config user.name "Suraj Vasudevan"
-
-            echo "Verifying BUILD_NUMBER=${BUILD_NUMBER}"
-            echo "Checking if replaceImageTag exists..."
-            grep "replaceImageTag" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml || echo "replaceImageTag not found"
-
-            echo "Updating deployment.yml with new image tag..."
-            sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-
-            echo "Verifying if update was successful..."
-            grep "${BUILD_NUMBER}" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml || echo "Update failed, trying alternative method..."
-
-            if ! grep "${BUILD_NUMBER}" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml; then
-              echo "Using awk as fallback..."
-              awk '{gsub(/replaceImageTag/, "'${BUILD_NUMBER}'"); print}' java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml > temp.yml
-              mv temp.yml java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-            fi
-
-            echo "Checking file permissions..."
-            chmod +w java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-
-            echo "Adding and committing changes..."
-            git add -f java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-            git status
-            git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-
-            echo "Pushing changes..."
-            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-          '''
-        }
-      }
     }
-  }
+    steps {
+        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+            sh '''
+                echo "Checking out the latest code..."
+                git checkout main
+                git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main --rebase
+                
+                echo "Setting Git user info..."
+                git config user.email "suraj.xyz@gmail.com"
+                git config user.name "Suraj Vasudevan"
+                
+                echo "Updating deployment.yml with new image tag..."
+                if grep -q "replaceImageTag" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml; then
+                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                else
+                    echo "replaceImageTag not found, skipping update!"
+                    exit 1
+                fi
+                
+                echo "Verifying if update was successful..."
+                grep "${BUILD_NUMBER}" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml || (echo "Update failed!" && exit 1)
+                
+                echo "Adding and committing changes..."
+                git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+            '''
+        }
+    }
 }
