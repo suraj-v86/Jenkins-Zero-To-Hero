@@ -76,9 +76,11 @@ pipeline {
             echo "Updating deployment.yml with new image tag..."
             if grep -q "replaceImageTag" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml; then
                 sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                echo "Image tag updated with build number: ${BUILD_NUMBER}"
             else
-                echo "replaceImageTag not found, skipping update!"
-                exit 1
+                echo "replaceImageTag not found, adding build number directly..."
+                sed -i "s|image: surajv86/ultimate-cicd-pipeline:.*|image: surajv86/ultimate-cicd-pipeline:${BUILD_NUMBER}|g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                echo "Image tag added with build number: ${BUILD_NUMBER}"
             fi
             
             echo "Verifying if update was successful..."
